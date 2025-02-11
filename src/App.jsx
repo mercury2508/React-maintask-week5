@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import { Modal } from "bootstrap";
+import { useForm } from "react-hook-form";
+import ReactLoading from 'react-loading';
 
 const baseUrl = import.meta.env.VITE_BASE_URL;
 const apiPath = import.meta.env.VITE_API_PATH;
@@ -8,15 +10,19 @@ const apiPath = import.meta.env.VITE_API_PATH;
 function App() {
   const [products, setProducts] = useState([]);
   const [tempProduct, setTempProduct] = useState([]);
+  const [isScreenLoading, setIsScreenLoading] = useState(false);
 
   useEffect(() => {
     const getProducts = async () => {
+      setIsScreenLoading(true);
       try {
         const res = await axios.get(`${baseUrl}/v2/api/${apiPath}/products`);
         setProducts(res.data.products);
         console.log(res.data.products);
       } catch (error) {
         alert("取得產品失敗:", error);
+      } finally{
+        setIsScreenLoading(false);
       }
     };
     getProducts();
@@ -46,24 +52,25 @@ function App() {
   const [qtySelect, setQtySelect] = useState(1);
 
   // 加入購物車
-  const handleAddToCart = async (product, qty = 1) => {
-    // console.log("product:", product);
+  const addToCart = async (product, qty = 1) => {
+    setIsScreenLoading(true);
     const productData = {
       data: {
         product_id: product.id,
         qty: qty,
       },
     };
-    // console.log(productData);
     try {
       const res = await axios.post(
         `${baseUrl}/v2/api/${apiPath}/cart`,
         productData
       );
-      console.log(res.data.message, res); //" res.data.message -> 已加入購物車"
+      console.log(res.data.message, res);
       getCartList();
     } catch (error) {
       console.log("加入購物車失敗:", error);
+    } finally{
+      setIsScreenLoading(false);
     }
   };
 
@@ -80,41 +87,90 @@ function App() {
   };
 
   // 刪除購物車單一物品
-  const handleDeleteSingleCartItem = async (id) => {
+  const deleteSingleCartItem = async (id) => {
+    setIsScreenLoading(true);
     try {
       const res = await axios.delete(`${baseUrl}/v2/api/${apiPath}/cart/${id}`);
       console.log("已刪除商品", res);
       getCartList();
     } catch (error) {
       console.log("刪除購物車商品失敗:", error);
+    } finally{
+      setIsScreenLoading(false);
     }
   };
 
   // 清空購物車
-  const handleDeleteCartItem = async () => {
+  const deleteCartItem = async () => {
+    setIsScreenLoading(true);
     try {
       const res = await axios.delete(`${baseUrl}/v2/api/${apiPath}/carts`);
       console.log("已清空購物車", res);
       getCartList();
     } catch (error) {
       console.log("清空購物車失敗:", error);
+    } finally{
+      setIsScreenLoading(false);
     }
   };
 
   // 調整商品數量
-  const updateCartItem = async(cart_id, item_id, qty) => {
+  const updateCartItem = async (cart_id, item_id, qty) => {
     const itemData = {
       data: {
         product_id: item_id,
-        qty: Number(qty)
-      }
-    }
+        qty: Number(qty),
+      },
+    };
+    setIsScreenLoading(true);
     try {
-      const res = await axios.put(`${baseUrl}/v2/api/${apiPath}/cart/${cart_id}`, itemData);
+      const res = await axios.put(
+        `${baseUrl}/v2/api/${apiPath}/cart/${cart_id}`,
+        itemData
+      );
       console.log("調整商品數量成功", res);
       getCartList();
     } catch (error) {
       console.log("調整商品數量失敗:", error);
+    } finally{
+      setIsScreenLoading(false);
+    }
+  };
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm();
+
+  // 表單資料
+  const onSubmit = handleSubmit((data) => {
+    const { message, ...user } = data;
+    const submitData = {
+      data: {
+        user,
+        message,
+      },
+    };
+    checkout(submitData);
+  });
+
+  // 客戶購物結帳
+  const checkout = async (submitData) => {
+    setIsScreenLoading(true);
+    try {
+      const res = await axios.post(
+        `${baseUrl}/v2/api/${apiPath}/order`,
+        submitData
+      );
+      console.log(res);
+      getCartList();
+      reset();
+    } catch (error) {
+      console.log("調整商品數量失敗:", error);
+    } finally{
+      setIsScreenLoading(false);
     }
   };
 
@@ -157,7 +213,7 @@ function App() {
                     <button
                       type="button"
                       className="btn btn-primary"
-                      onClick={() => handleAddToCart(product)}
+                      onClick={() => addToCart(product)}
                     >
                       加到購物車
                     </button>
@@ -221,7 +277,7 @@ function App() {
                 <button
                   type="button"
                   className="btn btn-primary"
-                  onClick={() => handleAddToCart(tempProduct, qtySelect)}
+                  onClick={() => addToCart(tempProduct, qtySelect)}
                 >
                   加入購物車
                 </button>
@@ -234,7 +290,7 @@ function App() {
           <button
             className="btn btn-outline-danger"
             type="button"
-            onClick={handleDeleteCartItem}
+            onClick={deleteCartItem}
             disabled={!cartItem.carts?.length}
           >
             清空購物車
@@ -258,7 +314,7 @@ function App() {
                     <button
                       type="button"
                       className="btn btn-outline-danger btn-sm"
-                      onClick={() => handleDeleteSingleCartItem(item.id)}
+                      onClick={() => deleteSingleCartItem(item.id)}
                     >
                       刪除
                     </button>
@@ -270,7 +326,13 @@ function App() {
                         <button
                           type="button"
                           className="btn btn-outline-dark btn-sm"
-                          onClick={()=>updateCartItem(item.id, item.product_id, item.qty - 1)}
+                          onClick={() =>
+                            updateCartItem(
+                              item.id,
+                              item.product_id,
+                              item.qty - 1
+                            )
+                          }
                           disabled={item.qty === 1}
                         >
                           -
@@ -284,7 +346,13 @@ function App() {
                         <button
                           type="button"
                           className="btn btn-outline-dark btn-sm"
-                          onClick={()=>updateCartItem(item.id, item.product_id, item.qty + 1)}
+                          onClick={() =>
+                            updateCartItem(
+                              item.id,
+                              item.product_id,
+                              item.qty + 1
+                            )
+                          }
                         >
                           +
                         </button>
@@ -315,7 +383,7 @@ function App() {
       </div>
 
       <div className="my-5 row justify-content-center">
-        <form className="col-md-6">
+        <form className="col-md-6" action="" onSubmit={onSubmit}>
           <div className="mb-3">
             <label htmlFor="email" className="form-label">
               Email
@@ -323,10 +391,22 @@ function App() {
             <input
               id="email"
               type="email"
-              className="form-control"
+              className={`form-control ${errors.email ? "is-invalid" : ""}`}
               placeholder="請輸入 Email"
+              {...register("email", {
+                required: {
+                  value: true,
+                  message: "Email為必填",
+                },
+                pattern: {
+                  value: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
+                  message: "Email格式錯誤",
+                },
+              })}
             />
-
+            {errors.email && (
+              <div className="invalid-feedback">{errors.email.message}</div>
+            )}
             <p className="text-danger my-2"></p>
           </div>
 
@@ -336,10 +416,18 @@ function App() {
             </label>
             <input
               id="name"
-              className="form-control"
+              className={`form-control ${errors.name ? "is-invalid" : ""}`}
               placeholder="請輸入姓名"
+              {...register("name", {
+                required: {
+                  value: true,
+                  message: "姓名為必填",
+                },
+              })}
             />
-
+            {errors.name && (
+              <div className="invalid-feedback">{errors.name.message}</div>
+            )}
             <p className="text-danger my-2"></p>
           </div>
 
@@ -350,10 +438,22 @@ function App() {
             <input
               id="tel"
               type="text"
-              className="form-control"
+              className={`form-control ${errors.tel ? "is-invalid" : ""}`}
               placeholder="請輸入電話"
+              {...register("tel", {
+                required: {
+                  value: true,
+                  message: "電話為必填",
+                },
+                pattern: {
+                  value: /^(0[2-8]\d{7}|09\d{8})$/,
+                  message: "電話格式不正確",
+                },
+              })}
             />
-
+            {errors.tel && (
+              <div className="invalid-feedback">{errors.tel.message}</div>
+            )}
             <p className="text-danger my-2"></p>
           </div>
 
@@ -364,10 +464,18 @@ function App() {
             <input
               id="address"
               type="text"
-              className="form-control"
+              className={`form-control ${errors.address ? "is-invalid" : ""}`}
               placeholder="請輸入地址"
+              {...register("address", {
+                required: {
+                  value: true,
+                  message: "地址為必填",
+                },
+              })}
             />
-
+            {errors.address && (
+              <div className="invalid-feedback">{errors.address.message}</div>
+            )}
             <p className="text-danger my-2"></p>
           </div>
 
@@ -380,15 +488,32 @@ function App() {
               className="form-control"
               cols="30"
               rows="10"
+              {...register("message")}
             ></textarea>
           </div>
           <div className="text-end">
-            <button type="submit" className="btn btn-danger">
+            <button
+              type="submit"
+              className="btn btn-danger"
+              disabled={!cartItem.carts?.length}
+            >
               送出訂單
             </button>
           </div>
         </form>
       </div>
+        {isScreenLoading && (
+        <div
+          className="d-flex justify-content-center align-items-center"
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(255,255,255,0.3)",
+            zIndex: 999,
+          }}>
+          <ReactLoading type="spin" color="black" width="4rem" height="4rem" />
+        </div>
+        )}
     </div>
   );
 }
