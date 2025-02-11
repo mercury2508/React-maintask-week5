@@ -46,30 +46,33 @@ function App() {
   const [qtySelect, setQtySelect] = useState(1);
 
   // 加入購物車
-  const handleAddToCart = async(product, qty = 1) => {
+  const handleAddToCart = async (product, qty = 1) => {
     // console.log("product:", product);
     const productData = {
-      data:{
+      data: {
         product_id: product.id,
-        qty: qty
-      }
+        qty: qty,
+      },
     };
     // console.log(productData);
     try {
-      const res = await axios.post(`${baseUrl}/v2/api/${apiPath}/cart`, productData);
-      console.log(res.data.message, res);//" res.data.message -> 已加入購物車"
+      const res = await axios.post(
+        `${baseUrl}/v2/api/${apiPath}/cart`,
+        productData
+      );
+      console.log(res.data.message, res); //" res.data.message -> 已加入購物車"
       getCartList();
     } catch (error) {
-      console.log("加入購物車失敗:", error)
-    } 
-  }
+      console.log("加入購物車失敗:", error);
+    }
+  };
 
   const [cartItem, setCartItem] = useState({});
   //取得購物車內容
-  const getCartList = async() =>{
+  const getCartList = async () => {
     try {
-      const res = await axios.get(`${baseUrl}/v2/api/${apiPath}/cart`)
-      console.log("成功取得購物車",res.data.data);
+      const res = await axios.get(`${baseUrl}/v2/api/${apiPath}/cart`);
+      console.log("成功取得購物車", res.data.data);
       setCartItem(res.data.data);
     } catch (error) {
       console.log("取得購物車失敗:", error);
@@ -77,27 +80,43 @@ function App() {
   };
 
   // 刪除購物車單一物品
-  const handleDeleteSingleCartItem = async(id) =>{
-    console.log(id)
+  const handleDeleteSingleCartItem = async (id) => {
     try {
-      const res = await axios.delete(`${baseUrl}/v2/api/${apiPath}/cart/${id}`)
-      console.log("已刪除商品",res);
+      const res = await axios.delete(`${baseUrl}/v2/api/${apiPath}/cart/${id}`);
+      console.log("已刪除商品", res);
       getCartList();
     } catch (error) {
       console.log("刪除購物車商品失敗:", error);
     }
-  }
+  };
 
   // 清空購物車
-  const handleDeleteCartItem = async() =>{
+  const handleDeleteCartItem = async () => {
     try {
-      const res = await axios.delete(`${baseUrl}/v2/api/${apiPath}/carts`)
-      console.log("已清空購物車",res);
+      const res = await axios.delete(`${baseUrl}/v2/api/${apiPath}/carts`);
+      console.log("已清空購物車", res);
       getCartList();
     } catch (error) {
       console.log("清空購物車失敗:", error);
     }
-  }
+  };
+
+  // 調整商品數量
+  const updateCartItem = async(cart_id, item_id, qty) => {
+    const itemData = {
+      data: {
+        product_id: item_id,
+        qty: Number(qty)
+      }
+    }
+    try {
+      const res = await axios.put(`${baseUrl}/v2/api/${apiPath}/cart/${cart_id}`, itemData);
+      console.log("調整商品數量成功", res);
+      getCartList();
+    } catch (error) {
+      console.log("調整商品數量失敗:", error);
+    }
+  };
 
   return (
     <div className="container">
@@ -135,7 +154,11 @@ function App() {
                     >
                       查看更多
                     </button>
-                    <button type="button" className="btn btn-primary" onClick={()=> handleAddToCart(product)}>
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      onClick={() => handleAddToCart(product)}
+                    >
                       加到購物車
                     </button>
                   </div>
@@ -195,22 +218,30 @@ function App() {
                 </div>
               </div>
               <div className="modal-footer">
-                <button type="button" className="btn btn-primary" onClick={()=> handleAddToCart(tempProduct, qtySelect)}>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => handleAddToCart(tempProduct, qtySelect)}
+                >
                   加入購物車
                 </button>
               </div>
             </div>
           </div>
         </div>
-        
+
         <div className="text-end py-3">
-          <button className="btn btn-outline-danger" type="button" onClick={()=> handleDeleteCartItem()} disabled={!cartItem.carts.length}>
+          <button
+            className="btn btn-outline-danger"
+            type="button"
+            onClick={handleDeleteCartItem}
+            disabled={!cartItem.carts?.length}
+          >
             清空購物車
           </button>
         </div>
 
-        {cartItem.carts?.length > 0 ? 
-        (
+        {cartItem.carts?.length > 0 ? (
           <table className="table align-middle">
             <thead>
               <tr>
@@ -221,10 +252,14 @@ function App() {
               </tr>
             </thead>
             <tbody>
-              {cartItem.carts?.map((item)=>(
+              {cartItem.carts?.map((item) => (
                 <tr key={item.id}>
                   <td>
-                    <button type="button" className="btn btn-outline-danger btn-sm" onClick={()=> handleDeleteSingleCartItem(item.id)}>
+                    <button
+                      type="button"
+                      className="btn btn-outline-danger btn-sm"
+                      onClick={() => handleDeleteSingleCartItem(item.id)}
+                    >
                       刪除
                     </button>
                   </td>
@@ -235,16 +270,21 @@ function App() {
                         <button
                           type="button"
                           className="btn btn-outline-dark btn-sm"
+                          onClick={()=>updateCartItem(item.id, item.product_id, item.qty - 1)}
+                          disabled={item.qty === 1}
                         >
                           -
                         </button>
                         <span
                           className="btn border border-dark"
                           style={{ width: "50px", cursor: "auto" }}
-                        >{item.qty}</span>
+                        >
+                          {item.qty}
+                        </span>
                         <button
                           type="button"
                           className="btn btn-outline-dark btn-sm"
+                          onClick={()=>updateCartItem(item.id, item.product_id, item.qty + 1)}
                         >
                           +
                         </button>
@@ -263,11 +303,15 @@ function App() {
                 <td colSpan="3" className="text-end">
                   總計：
                 </td>
-                <td className="text-end" style={{ width: "130px" }}>{cartItem.total}</td>
+                <td className="text-end" style={{ width: "130px" }}>
+                  {cartItem.total}
+                </td>
               </tr>
             </tfoot>
           </table>
-        ):<div className="text-center mt-3">購物車目前是空的</div>}
+        ) : (
+          <div className="text-center mt-3">購物車目前是空的</div>
+        )}
       </div>
 
       <div className="my-5 row justify-content-center">
