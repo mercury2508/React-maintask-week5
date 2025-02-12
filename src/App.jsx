@@ -11,6 +11,7 @@ function App() {
   const [products, setProducts] = useState([]);
   const [tempProduct, setTempProduct] = useState([]);
   const [isScreenLoading, setIsScreenLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     const getProducts = async () => {
@@ -18,7 +19,6 @@ function App() {
       try {
         const res = await axios.get(`${baseUrl}/v2/api/${apiPath}/products`);
         setProducts(res.data.products);
-        console.log(res.data.products);
       } catch (error) {
         alert("取得產品失敗:", error);
       } finally{
@@ -52,25 +52,24 @@ function App() {
   const [qtySelect, setQtySelect] = useState(1);
 
   // 加入購物車
-  const addToCart = async (product, qty = 1) => {
-    setIsScreenLoading(true);
+  const addToCart =  async(product, qty = 1) => {
+    setIsLoading(true);
     const productData = {
       data: {
         product_id: product.id,
-        qty: qty,
+        qty: Number(qty),
       },
     };
     try {
-      const res = await axios.post(
+      await axios.post(
         `${baseUrl}/v2/api/${apiPath}/cart`,
         productData
       );
-      console.log(res.data.message, res);
       getCartList();
     } catch (error) {
       console.log("加入購物車失敗:", error);
     } finally{
-      setIsScreenLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -160,11 +159,10 @@ function App() {
   const checkout = async (submitData) => {
     setIsScreenLoading(true);
     try {
-      const res = await axios.post(
+      await axios.post(
         `${baseUrl}/v2/api/${apiPath}/order`,
         submitData
       );
-      console.log(res);
       getCartList();
       reset();
     } catch (error) {
@@ -212,10 +210,18 @@ function App() {
                     </button>
                     <button
                       type="button"
-                      className="btn btn-primary"
+                      className="btn btn-primary d-flex align-items-center gap-2"
                       onClick={() => addToCart(product)}
+                      disabled={isLoading}
                     >
                       加到購物車
+                      {isLoading && 
+                      <ReactLoading
+                        type={"spokes"}
+                        color={"#000"}
+                        height={"1rem"}
+                        width={"1rem"}
+                      />}
                     </button>
                   </div>
                 </td>
@@ -276,10 +282,18 @@ function App() {
               <div className="modal-footer">
                 <button
                   type="button"
-                  className="btn btn-primary"
+                  className="btn btn-primary d-flex align-items-center gap-2"
                   onClick={() => addToCart(tempProduct, qtySelect)}
+                  disabled={isLoading}
                 >
                   加入購物車
+                  {isLoading && 
+                  <ReactLoading
+                    type={"spokes"}
+                    color={"gray"}
+                    height={"1.5rem"}
+                    width={"1.5rem"}
+                  />}
                 </button>
               </div>
             </div>
@@ -511,7 +525,7 @@ function App() {
             backgroundColor: "rgba(255,255,255,0.3)",
             zIndex: 999,
           }}>
-          <ReactLoading type="spin" color="black" width="4rem" height="4rem" />
+          <ReactLoading type="spokes" color="gray" width="4rem" height="4rem" />
         </div>
         )}
     </div>
