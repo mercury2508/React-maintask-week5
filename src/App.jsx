@@ -3,6 +3,8 @@ import axios from "axios";
 import { Modal } from "bootstrap";
 import { useForm } from "react-hook-form";
 import ReactLoading from 'react-loading';
+import Swal from 'sweetalert2'
+import withReactContent from 'sweetalert2-react-content'
 
 const baseUrl = import.meta.env.VITE_BASE_URL;
 const apiPath = import.meta.env.VITE_API_PATH;
@@ -13,6 +15,27 @@ function App() {
   const [isScreenLoading, setIsScreenLoading] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
+  const showSwal = (text) => {
+    withReactContent(Swal).fire({
+      title: text,
+      icon: "success",
+      toast: true,
+      position: "top-end",
+      showConfirmButton: false,
+      timer: 1500,
+      timerProgressBar: true,
+      width: "20%"
+    })
+  };
+
+  const showSwalError = (text, error) => {
+    withReactContent(Swal).fire({
+      title: text,
+      text: error,
+      icon: "error"
+    })
+  };
+
   useEffect(() => {
     const getProducts = async () => {
       setIsScreenLoading(true);
@@ -20,7 +43,7 @@ function App() {
         const res = await axios.get(`${baseUrl}/v2/api/${apiPath}/products`);
         setProducts(res.data.products);
       } catch (error) {
-        alert("取得產品失敗:", error);
+        showSwalError("取得產品失敗", error.response?.data?.message);
       } finally{
         setIsScreenLoading(false);
       }
@@ -65,9 +88,10 @@ function App() {
         `${baseUrl}/v2/api/${apiPath}/cart`,
         productData
       );
+      showSwal("已加入購物車");
       getCartList();
     } catch (error) {
-      console.log("加入購物車失敗:", error);
+      showSwalError("加入購物車失敗", error.response?.data?.message);
     } finally{
       setIsLoading(false);
     }
@@ -78,10 +102,9 @@ function App() {
   const getCartList = async () => {
     try {
       const res = await axios.get(`${baseUrl}/v2/api/${apiPath}/cart`);
-      console.log("成功取得購物車", res.data.data);
       setCartItem(res.data.data);
     } catch (error) {
-      console.log("取得購物車失敗:", error);
+      showSwalError("取得購物車失敗", error.response?.data?.message);
     }
   };
 
@@ -89,11 +112,10 @@ function App() {
   const deleteSingleCartItem = async (id) => {
     setIsScreenLoading(true);
     try {
-      const res = await axios.delete(`${baseUrl}/v2/api/${apiPath}/cart/${id}`);
-      console.log("已刪除商品", res);
+      await axios.delete(`${baseUrl}/v2/api/${apiPath}/cart/${id}`);
       getCartList();
     } catch (error) {
-      console.log("刪除購物車商品失敗:", error);
+      showSwalError("刪除購物車商品失敗", error.response?.data?.message);
     } finally{
       setIsScreenLoading(false);
     }
@@ -103,11 +125,10 @@ function App() {
   const deleteCartItem = async () => {
     setIsScreenLoading(true);
     try {
-      const res = await axios.delete(`${baseUrl}/v2/api/${apiPath}/carts`);
-      console.log("已清空購物車", res);
+      await axios.delete(`${baseUrl}/v2/api/${apiPath}/carts`);
       getCartList();
     } catch (error) {
-      console.log("清空購物車失敗:", error);
+      showSwalError("清空購物車失敗", error.response?.data?.message);
     } finally{
       setIsScreenLoading(false);
     }
@@ -123,14 +144,13 @@ function App() {
     };
     setIsScreenLoading(true);
     try {
-      const res = await axios.put(
+      await axios.put(
         `${baseUrl}/v2/api/${apiPath}/cart/${cart_id}`,
         itemData
       );
-      console.log("調整商品數量成功", res);
       getCartList();
     } catch (error) {
-      console.log("調整商品數量失敗:", error);
+      showSwalError("調整商品數量失敗", error.response?.data?.message);
     } finally{
       setIsScreenLoading(false);
     }
@@ -141,7 +161,9 @@ function App() {
     handleSubmit,
     reset,
     formState: { errors },
-  } = useForm();
+  } = useForm({
+    mode: 'onTouched',
+  });
 
   // 表單資料
   const onSubmit = handleSubmit((data) => {
@@ -165,8 +187,9 @@ function App() {
       );
       getCartList();
       reset();
+      showSwal("已送出訂單!");
     } catch (error) {
-      console.log("調整商品數量失敗:", error);
+      showSwalError("送出訂單失敗", error.response?.data?.message);
     } finally{
       setIsScreenLoading(false);
     }
@@ -197,7 +220,7 @@ function App() {
                 <td>{product.title}</td>
                 <td>
                   <del className="h6">原價 {product.origin_price} 元</del>
-                  <div className="h5">特價 {product.origin_price}元</div>
+                  <div className="h5">特價 {product.price}元</div>
                 </td>
                 <td>
                   <div className="btn-group btn-group-sm">
@@ -259,10 +282,8 @@ function App() {
                 />
                 <p>內容：{tempProduct.content}</p>
                 <p>描述：{tempProduct.description}</p>
-                <p>
-                  價錢：{tempProduct.price}{" "}
-                  <del>{tempProduct.origin_price}</del> 元
-                </p>
+                <p>原價：<del>{tempProduct.origin_price}</del> 元</p>
+                <p>特價：{tempProduct.price} 元</p>
                 <div className="input-group align-items-center">
                   <label htmlFor="qtySelect">數量：</label>
                   <select
