@@ -2,9 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import { Modal } from "bootstrap";
 import { useForm } from "react-hook-form";
-import ReactLoading from 'react-loading';
-import Swal from 'sweetalert2'
-import withReactContent from 'sweetalert2-react-content'
+import ReactLoading from "react-loading";
+import Swal from "sweetalert2";
+import withReactContent from "sweetalert2-react-content";
 
 const baseUrl = import.meta.env.VITE_BASE_URL;
 const apiPath = import.meta.env.VITE_API_PATH;
@@ -14,6 +14,7 @@ function App() {
   const [tempProduct, setTempProduct] = useState([]);
   const [isScreenLoading, setIsScreenLoading] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [modalState, setModalState] = useState(false);
 
   const showSwal = (text) => {
     withReactContent(Swal).fire({
@@ -24,16 +25,16 @@ function App() {
       showConfirmButton: false,
       timer: 1500,
       timerProgressBar: true,
-      width: "20%"
-    })
+      width: "20%",
+    });
   };
 
   const showSwalError = (text, error) => {
     withReactContent(Swal).fire({
       title: text,
       text: error,
-      icon: "error"
-    })
+      icon: "error",
+    });
   };
 
   useEffect(() => {
@@ -44,7 +45,7 @@ function App() {
         setProducts(res.data.products);
       } catch (error) {
         showSwalError("取得產品失敗", error.response?.data?.message);
-      } finally{
+      } finally {
         setIsScreenLoading(false);
       }
     };
@@ -70,12 +71,13 @@ function App() {
   const handleSeeMore = (product) => {
     setTempProduct(product);
     openModal();
+    setModalState(true);
   };
 
   const [qtySelect, setQtySelect] = useState(1);
 
   // 加入購物車
-  const addToCart =  async(product, qty = 1) => {
+  const addToCart = async (product, qty = 1) => {
     setIsLoading(true);
     const productData = {
       data: {
@@ -84,15 +86,16 @@ function App() {
       },
     };
     try {
-      await axios.post(
-        `${baseUrl}/v2/api/${apiPath}/cart`,
-        productData
-      );
+      await axios.post(`${baseUrl}/v2/api/${apiPath}/cart`, productData);
       showSwal("已加入購物車");
       getCartList();
+      if (modalState) {
+        closeModal();
+        setModalState(false);
+      }
     } catch (error) {
       showSwalError("加入購物車失敗", error.response?.data?.message);
-    } finally{
+    } finally {
       setIsLoading(false);
     }
   };
@@ -109,27 +112,27 @@ function App() {
   };
 
   // 刪除購物車單一物品
-  const deleteSingleCartItem = async (id) => {
+  const deleteCartItem = async (id) => {
     setIsScreenLoading(true);
     try {
       await axios.delete(`${baseUrl}/v2/api/${apiPath}/cart/${id}`);
       getCartList();
     } catch (error) {
       showSwalError("刪除購物車商品失敗", error.response?.data?.message);
-    } finally{
+    } finally {
       setIsScreenLoading(false);
     }
   };
 
   // 清空購物車
-  const deleteCartItem = async () => {
+  const deleteCarts = async () => {
     setIsScreenLoading(true);
     try {
       await axios.delete(`${baseUrl}/v2/api/${apiPath}/carts`);
       getCartList();
     } catch (error) {
       showSwalError("清空購物車失敗", error.response?.data?.message);
-    } finally{
+    } finally {
       setIsScreenLoading(false);
     }
   };
@@ -144,14 +147,11 @@ function App() {
     };
     setIsScreenLoading(true);
     try {
-      await axios.put(
-        `${baseUrl}/v2/api/${apiPath}/cart/${cart_id}`,
-        itemData
-      );
+      await axios.put(`${baseUrl}/v2/api/${apiPath}/cart/${cart_id}`, itemData);
       getCartList();
     } catch (error) {
       showSwalError("調整商品數量失敗", error.response?.data?.message);
-    } finally{
+    } finally {
       setIsScreenLoading(false);
     }
   };
@@ -162,7 +162,7 @@ function App() {
     reset,
     formState: { errors },
   } = useForm({
-    mode: 'onTouched',
+    mode: "onTouched",
   });
 
   // 表單資料
@@ -181,16 +181,13 @@ function App() {
   const checkout = async (submitData) => {
     setIsScreenLoading(true);
     try {
-      await axios.post(
-        `${baseUrl}/v2/api/${apiPath}/order`,
-        submitData
-      );
+      await axios.post(`${baseUrl}/v2/api/${apiPath}/order`, submitData);
       getCartList();
       reset();
       showSwal("已送出訂單!");
     } catch (error) {
       showSwalError("送出訂單失敗", error.response?.data?.message);
-    } finally{
+    } finally {
       setIsScreenLoading(false);
     }
   };
@@ -238,13 +235,14 @@ function App() {
                       disabled={isLoading}
                     >
                       加到購物車
-                      {isLoading && 
-                      <ReactLoading
-                        type={"spokes"}
-                        color={"#000"}
-                        height={"1rem"}
-                        width={"1rem"}
-                      />}
+                      {isLoading && (
+                        <ReactLoading
+                          type={"spokes"}
+                          color={"#000"}
+                          height={"1rem"}
+                          width={"1rem"}
+                        />
+                      )}
                     </button>
                   </div>
                 </td>
@@ -282,7 +280,9 @@ function App() {
                 />
                 <p>內容：{tempProduct.content}</p>
                 <p>描述：{tempProduct.description}</p>
-                <p>原價：<del>{tempProduct.origin_price}</del> 元</p>
+                <p>
+                  原價：<del>{tempProduct.origin_price}</del> 元
+                </p>
                 <p>特價：{tempProduct.price} 元</p>
                 <div className="input-group align-items-center">
                   <label htmlFor="qtySelect">數量：</label>
@@ -308,13 +308,14 @@ function App() {
                   disabled={isLoading}
                 >
                   加入購物車
-                  {isLoading && 
-                  <ReactLoading
-                    type={"spokes"}
-                    color={"gray"}
-                    height={"1.5rem"}
-                    width={"1.5rem"}
-                  />}
+                  {isLoading && (
+                    <ReactLoading
+                      type={"spokes"}
+                      color={"gray"}
+                      height={"1.5rem"}
+                      width={"1.5rem"}
+                    />
+                  )}
                 </button>
               </div>
             </div>
@@ -325,7 +326,7 @@ function App() {
           <button
             className="btn btn-outline-danger"
             type="button"
-            onClick={deleteCartItem}
+            onClick={deleteCarts}
             disabled={!cartItem.carts?.length}
           >
             清空購物車
@@ -349,7 +350,7 @@ function App() {
                     <button
                       type="button"
                       className="btn btn-outline-danger btn-sm"
-                      onClick={() => deleteSingleCartItem(item.id)}
+                      onClick={() => deleteCartItem(item.id)}
                     >
                       刪除
                     </button>
@@ -472,7 +473,7 @@ function App() {
             </label>
             <input
               id="tel"
-              type="text"
+              type="tel"
               className={`form-control ${errors.tel ? "is-invalid" : ""}`}
               placeholder="請輸入電話"
               {...register("tel", {
@@ -537,7 +538,7 @@ function App() {
           </div>
         </form>
       </div>
-        {isScreenLoading && (
+      {isScreenLoading && (
         <div
           className="d-flex justify-content-center align-items-center"
           style={{
@@ -545,10 +546,11 @@ function App() {
             inset: 0,
             backgroundColor: "rgba(255,255,255,0.3)",
             zIndex: 999,
-          }}>
+          }}
+        >
           <ReactLoading type="spokes" color="gray" width="4rem" height="4rem" />
         </div>
-        )}
+      )}
     </div>
   );
 }
